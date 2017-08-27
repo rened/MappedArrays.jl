@@ -91,8 +91,9 @@ _indexstyle(a, b) = IndexStyle(a, b)
 # IndexLinear implementations
 @propagate_inbounds Base.getindex(A::AbstractMappedArray, i::Int) =
     A.f(A.data[i])
-@propagate_inbounds Base.getindex(M::ReadonlyMultiMappedArray, i::Int) =
-    M.f(map(A->A[i], M.data)...)
+@propagate_inbounds function Base.getindex(M::ReadonlyMultiMappedArray, i::Int)
+    M.f(_getindex(i, M.data...)...)
+end
 @propagate_inbounds function Base.setindex!(A::MappedArray{T},
                                             val::T,
                                             i::Int) where {T}
@@ -110,7 +111,7 @@ end
 end
 @propagate_inbounds function Base.getindex(M::ReadonlyMultiMappedArray{T,N},
                                            i::Vararg{Int,N}) where {T,N}
-    M.f(map(A->A[i...], M.data)...)
+    M.f(_getindex(CartesianIndex(i), M.data...)...)
 end
 @propagate_inbounds function Base.setindex!(A::MappedArray{T,N},
                                             val::T,
@@ -121,6 +122,9 @@ end
                                 val, i::Vararg{Int,N}) where {T,N}
     setindex!(A, convert(T, val), i...)
 end
+
+@propagate_inbounds _getindex(i, A, As...) = (A[i], _getindex(i, As...)...)
+_getindex(i) = ()
 
 function testvalue(data)
     if !isempty(data)
